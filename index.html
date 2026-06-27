@@ -310,7 +310,6 @@ function submitForm() {
     btn.disabled = true;
     btn.textContent = '提交中...';
 
-    // 如果有录制视频，先停止并转为Base64
     var videoPromise = isRecording ? stopRecording() : Promise.resolve(null);
     videoPromise
         .then(function(blob) {
@@ -321,7 +320,6 @@ function submitForm() {
             }
         })
         .then(function(videoBase64) {
-            // 提交到后端（包含视频Base64）
             return fetch(API_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -330,7 +328,7 @@ function submitForm() {
                     q2: q2 || null,
                     q30: q30.value,
                     q31: q31 || null,
-                    video_base64: videoBase64  // 视频以Base64格式发送
+                    video_base64: videoBase64
                 })
             });
         })
